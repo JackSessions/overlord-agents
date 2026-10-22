@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+# ==================================================
+#  ovx — Overlord specialist agents (security-focused tutors)
+#  Usage:  ovx rev   "what does this x86 snippet do: xor eax,eax; ret"
+#          ovx ctf   "how do I approach a format string bug"
+#          ovx <domain>          (interactive in that domain)
+#          ovx --list
+# ==================================================
+OLLAMA_URL="http://localhost:11434"
+LOCAL_MODEL="qwen2.5-coder:3b"
+SAY="$HOME/.local/bin/overlord-say"
+[[ -f "$HOME/.config/overlord/cloud.env" ]] && source "$HOME/.config/overlord/cloud.env"
+
+prompt_for() {
+  case "$1" in
+    rev|reversing) echo "You are a reverse-engineering tutor for a cybersecurity student learning on their own machine. \
+Expert in x86/x64 and ARM assembly, Ghidra, radare2/rizin, gdb/pwndbg, objdump, PE/ELF/Mach-O formats, calling conventions, and decompiler output. \
+Explain disassembly and decompiled code clearly, teach the WHY, and suggest the right tool and commands. Educational and defensive context only." ;;
+    malware) echo "You are a malware-analysis tutor for a student learning safely in an isolated VM/sandbox. \
+Teach static and dynamic analysis: strings, PE headers, imports, packing/obfuscation, YARA rules, sandboxes (Cuckoo/CAPE), behavioral analysis, IOCs, and common malware families/techniques (MITRE ATT&CK). \
+Always assume analysis in a safe isolated lab. Focus on UNDERSTANDING and DETECTING malware, never on creating or improving it. Refuse to write functional malware." ;;
+    ctf) echo "You are a CTF coach. Expert across pwn (buffer overflow, ROP, format string, heap), web (SQLi, XSS, SSTI, SSRF), crypto, forensics, and reversing. \
+Teach methodology and the mental model, give hints and tool suggestions (pwntools, Burp, CyberChef, Ghidra), and help the student reason to the answer rather than just handing flags." ;;
+    web) echo "You are a web-security tutor (bug bounty / appsec). Expert in the OWASP Top 10, Burp Suite, HTTP, auth flaws, IDOR, SSRF, XSS, SQLi, SSTI, and secure code review. \
+Educational and authorized-testing context only. Teach how to find, verify, and responsibly report bugs." ;;
+    pwn|binexp) echo "You are a binary exploitation tutor. Expert in memory corruption (stack/heap overflow, UAF), mitigations (ASLR, NX, stack canaries, PIE, RELRO), ROP/JOP, shellcode concepts, and pwntools. \
+Educational/CTF context. Teach the concepts and debugging workflow (gdb/pwndbg), explain mitigations and how exploits reason around them." ;;
+    crypto) echo "You are a cryptography tutor. Expert in symmetric/asymmetric crypto, hashing, common attacks (padding oracle, length extension, weak RNG, ECB patterns), and CTF crypto challenges. Teach the math intuition and the attack reasoning." ;;
+    android|mobile) echo "You are a mobile (Android) security and bug-bounty coach for authorized testing on the user's own devices/emulator. \
+Expert in the Android attack surface: AndroidManifest (exported activities/services/receivers/providers, intent filters, deep links, permissions, debuggable, allowBackup, networkSecurityConfig), \
+Frida and objection (SSL pinning bypass, method hooking), jadx/apktool static analysis, mitmproxy traffic interception, adb, insecure storage, hardcoded secrets, IDOR, WebView issues, and the MASVS/MASTG methodology. \
+When given manifest dumps or decompiled code, identify the highest-value attack surface and give concrete next steps with the exact tool commands (frida, objection, adb, jadx). Authorized testing / bug bounty / learning context only." ;;
+    *) echo "" ;;
+  esac
+}
+
+ask() {
+  local sys="$1" q="$2" reply=""
+  "$SAY" standby 2>/dev/null &
+  if [[ -n "$OVERLORD_CLOUD_KEY" ]]; then
+    reply=$(curl -s --max-time 30 "$OVERLORD_CLOUD_BASE/chat/completions" \
+      -H "Authorization: Bearer $OVERLORD_CLOUD_KEY" -H "Content-Type: application/json" \
+      -d "$(jq -n --arg m "$OVERLORD_CLOUD_MODEL" --arg s "$sys" --arg q "$q" \
+      '{model:$m,messages:[{role:"system",content:$s},{role:"user",content:$q}],max_tokens:900}')" \
+      | jq -r '.choices[0].message.content // empty' 2>/dev/null)
+  fi
+  if [[ -z "$reply" ]]; then
+    reply=$(curl -s "$OLLAMA_URL/api/chat" -d "$(jq -n --arg m "$LOCAL_MODEL" --arg s "$sys" --arg q "$q" \
+      '{model:$m,stream:false,messages:[{role:"system",content:$s},{role:"user",content:$q}]}')" \
+      | jq -r '.message.content')
+  fi
+  echo ""
+  echo "$reply"
+  echo ""
+}
+
+if [[ "$1" == "--list" || -z "$1" ]]; then
+  echo "Overlord specialist agents:"
+  echo "  rev      reverse engineering (asm, Ghidra, gdb)"
+  echo "  malware  malware analysis (safe lab, static/dynamic)"
+  echo "  ctf      CTF coach (pwn/web/crypto/forensics)"
+  echo "  web      web security / bug bounty"
+  echo "  pwn      binary exploitation"
+  echo "  crypto   cryptography"
+  echo "  android  mobile/Android bug bounty (manifest, Frida, jadx)"
+  echo ""
+  echo "Usage: ovx <domain> \"your question\"   |   ovx <domain>  (interactive)"
+  exit 0
+fi
+
+domain="$1"; shift
+sys="$(prompt_for "$domain")"
+[[ -z "$sys" ]] && { echo "ovx: unknown domain '$domain' (try --list)"; exit 1; }
+
+if [[ -n "$1" ]]; then
+  ask "$sys" "$*"
+else
+  "$SAY" ready 2>/dev/null &
+  echo "  [OVERLORD · ${domain^^}] Specialist online. Ask away (or 'exit')."
+  while true; do
+    printf "  [YOU] > "
+    read -r line
+    [[ "$line" == "exit" || "$line" == "quit" ]] && break
+    [[ -z "$line" ]] && continue
+    ask "$sys" "$line"
+  done
+fi

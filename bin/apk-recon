@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+# ==================================================
+#  apk-recon — static attack-surface recon on an APK, then an AI bug-hunting briefing
+#  Usage:  apk-recon /path/to/app.apk
+#  Authorized testing / bug bounty / learning only.
+# ==================================================
+set -euo pipefail
+APK="${1:-}"
+[[ -z "$APK" || ! -f "$APK" ]] && { echo "usage: apk-recon <app.apk>"; exit 1; }
+
+AAPT2=$(ls "$HOME"/Android/Sdk/build-tools/*/aapt2 2>/dev/null | sort -V | tail -1)
+[[ -z "$AAPT2" ]] && { echo "aapt2 not found in Android SDK build-tools"; exit 1; }
+SAY="$HOME/.local/bin/overlord-say"
+[[ -f "$HOME/.config/overlord/cloud.env" ]] && source "$HOME/.config/overlord/cloud.env"
+
+echo "  [RECON] Target: $(basename "$APK")"
+"$SAY" standby 2>/dev/null &
+
+BADGING=$("$AAPT2" dump badging "$APK" 2>/dev/null || true)
+PKG=$(echo "$BADGING" | sed -n "s/^package: name='\([^']*\)'.*/\1/p")
+SDKMIN=$(echo "$BADGING" | sed -n "s/^sdkVersion:'\([0-9]*\)'/\1/p")
+SDKTGT=$(echo "$BADGING" | sed -n "s/^targetSdkVersion:'\([0-9]*\)'/\1/p")
+PERMS=$(echo "$BADGING" | sed -n "s/^uses-permission: name='\([^']*\)'/\1/p")
+
+# Manifest xmltree for exported components, deep links, flags
+MANI=$("$AAPT2" dump xmltree "$APK" --file AndroidManifest.xml 2>/dev/null || true)
+DEBUGGABLE=$(echo "$MANI" | grep -c "android:debuggable.*=.*true\|debuggable.*0xffffffff" || true)
+BACKUP=$(echo "$MANI" | grep -c "allowBackup.*true\|allowBackup.*0xffffffff" || true)
+# Exported components: nodes with exported=true
+EXPORTED=$(echo "$MANI" | grep -iE "exported.*0xffffffff|exported.*true" | wc -l || true)
+# Deep link schemes
+SCHEMES=$(echo "$MANI" | grep -iA1 "android:scheme" | grep -oE 'Raw: "[^"]+"' | sed 's/Raw: //' | sort -u | head -20 || true)
+
+# Build a compact recon report
+REPORT=$(cat <<EOF
+APK: $(basename "$APK")
+Package: ${PKG:-unknown}
+minSdk: ${SDKMIN:-?}  targetSdk: ${SDKTGT:-?}
+debuggable: $([[ "$DEBUGGABLE" -gt 0 ]] && echo YES || echo no)
+allowBackup: $([[ "$BACKUP" -gt 0 ]] && echo YES || echo no)
+Exported component entries: $EXPORTED
+Deep-link schemes: $(echo "$SCHEMES" | tr '\n' ' ')
+
+Permissions:
+$PERMS
+EOF
+)
+
+echo ""
+echo "=================== STATIC RECON ==================="
+echo "$REPORT"
+echo "==================================================="
+echo ""
+
+# Send to the mobile agent for a prioritized attack-surface briefing
+Q="Here is static recon of an Android app I'm authorized to test. Give me a prioritized attack-surface briefing: \
+the 3-5 highest-value things to probe first and the exact frida/objection/adb/jadx commands to start. Be concrete.
+
+$REPORT"
+
+SYS="You are a mobile (Android) bug-bounty coach for authorized testing. Given static recon, identify the highest-value attack surface and give concrete next steps with exact tool commands. Prioritize. Authorized/learning context only."
+
+echo "  [OVERLORD · MOBILE] Analyzing attack surface..."
+if [[ -n "${OVERLORD_CLOUD_KEY:-}" ]]; then
+  curl -s --max-time 40 "$OVERLORD_CLOUD_BASE/chat/completions" \
+    -H "Authorization: Bearer $OVERLORD_CLOUD_KEY" -H "Content-Type: application/json" \
+    -d "$(jq -n --arg m "$OVERLORD_CLOUD_MODEL" --arg s "$SYS" --arg q "$Q" \
+      '{model:$m,messages:[{role:"system",content:$s},{role:"user",content:$q}],max_tokens:1100}')" \
+    | jq -r '.choices[0].message.content // "（cloud error — is the endpoint reachable?)"'
+else
+  curl -s "http://localhost:11434/api/chat" -d "$(jq -n --arg m "qwen2.5-coder:3b" --arg s "$SYS" --arg q "$Q" \
+    '{model:$m,stream:false,messages:[{role:"system",content:$s},{role:"user",content:$q}]}')" \
+    | jq -r '.message.content'
+fi
+echo ""
+"$SAY" success 2>/dev/null &

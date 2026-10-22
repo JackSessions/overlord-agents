@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+# ==================================================
+#  overlord-sys — voice system agent (Qwen picks a command, YOU approve, it runs)
+#  Usage:  overlord-sys "what's eating my RAM?"
+#          overlord-sys           (interactive)
+# ==================================================
+OLLAMA_URL="http://localhost:11434"
+MODEL="qwen2.5-coder:3b"
+SAY="$HOME/.local/bin/overlord-say"
+
+# Load cloud Qwen creds if present (cloud-first when online, local fallback)
+[[ -f "$HOME/.config/overlord/cloud.env" ]] && source "$HOME/.config/overlord/cloud.env"
+
+SYS="You are Overlord, a Linux command operator. The user describes what they want in plain English. \
+Reply with ONE single-line shell command that accomplishes it on Ubuntu. \
+Output ONLY the command, no explanation, no markdown, no backticks. \
+Prefer safe, read-only commands. Never use rm, dd, mkfs, or anything destructive."
+
+clean() { sed 's/^```.*//; s/```//; /^$/d' | head -1 | tr -d '`'; }
+
+propose() {
+    local want="$1" out=""
+    # Try cloud Qwen first (fast) with a short timeout
+    if [[ -n "$OVERLORD_CLOUD_KEY" ]]; then
+        out=$(curl -s --max-time 12 "$OVERLORD_CLOUD_BASE/chat/completions" \
+            -H "Authorization: Bearer $OVERLORD_CLOUD_KEY" -H "Content-Type: application/json" \
+            -d "$(jq -n --arg m "$OVERLORD_CLOUD_MODEL" --arg s "$SYS" --arg q "$want" \
+            '{model:$m,messages:[{role:"system",content:$s},{role:"user",content:$q}],max_tokens:120}')" \
+            | jq -r '.choices[0].message.content // empty' 2>/dev/null | clean)
+    fi
+    # Fall back to local Ollama if cloud gave nothing (offline / error)
+    if [[ -z "$out" ]]; then
+        out=$(curl -s "$OLLAMA_URL/api/chat" -d "$(jq -n --arg m "$MODEL" --arg s "$SYS" --arg q "$want" \
+            '{model:$m,stream:false,options:{temperature:0.1},messages:[{role:"system",content:$s},{role:"user",content:$q}]}')" \
+            | jq -r '.message.content' | clean)
+    fi
+    echo "$out"
+}
+
+run_one() {
+    local want="$1"
+    "$SAY" standby 2>/dev/null &
+    local cmd; cmd=$(propose "$want")
+    echo ""
+    echo "  [OVERLORD] Proposed command:"
+    echo "    $cmd"
+    echo ""
+    printf "  Execute? [y/N] "
+    read -r ok
+    if [[ "$ok" == "y" || "$ok" == "Y" ]]; then
+        echo "  --- executing ---"
+        if eval "$cmd"; then
+            echo ""
+            "$SAY" success 2>/dev/null &
+            echo "  [OVERLORD] Command executed."
+        else
+            echo ""
+            "$SAY" fail 2>/dev/null &
+            echo "  [OVERLORD] Command failed, operator."
+        fi
+    else
+        echo "  [OVERLORD] Aborted. Standing by."
+    fi
+}
+
+if [[ -n "$1" ]]; then
+    run_one "$*"
+else
+    "$SAY" ready 2>/dev/null &
+    echo "  [OVERLORD] System agent online. Describe what you need (or 'exit')."
+    while true; do
+        printf "  [YOU] > "
+        read -r line
+        [[ "$line" == "exit" || "$line" == "quit" ]] && break
+        [[ -z "$line" ]] && continue
+        run_one "$line"
+    done
+fi

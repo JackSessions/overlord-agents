@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# ==================================================
+#  overlord-say — play a RANDOM Overlord line from a category (his real voice)
+#  Categories search the FULL library, so each call rotates through all matches.
+#  Usage:  overlord-say success   |   overlord-say --list
+# ==================================================
+LIB="$HOME/.local/share/overlord/library"
+IDX="$LIB/index.tsv"
+[[ ! -f "$IDX" ]] && { echo "library not found"; exit 1; }
+
+# category -> extended regex matched against the line text (case-insensitive)
+pattern_for() {
+  case "$1" in
+    ready|online)   echo "get ready|ready up|online|get set|standby to|here we go" ;;
+    success|done)   echo "mission accomplished|good job|nicely done|excellent|personal best|personal record|well done|that.s the way|beat your previous|new record|great work" ;;
+    fail|failed)    echo "mission failed|not good enough|run it again|torn up|rethink our strategy|next time|too slow|out of time" ;;
+    error)          echo "not good enough|run it again|mission failed|find.*cover|be advised" ;;
+    warning)        echo "be advised|recommend|find cover|find some cover|keep your eyes|keep your distance|incoming|hostiles|enemy .*inbound|take cover|watch your" ;;
+    standby|progress) echo "stand by|standby|halfway|almost|quarter|keep going|keep moving|pick up the pace|on pace|making progress" ;;
+    inbound)        echo "inbound|incoming|approaching|headed your way|moving towards|en route|eta" ;;
+    *)              echo "" ;;
+  esac
+}
+
+if [[ "$1" == "--list" || -z "$1" ]]; then
+  echo "Overlord categories (each rotates through all matching lines):"
+  for c in ready success fail error warning standby inbound; do
+    n=$(grep -iEc "$(pattern_for $c)" "$IDX" 2>/dev/null)
+    printf "  %-10s %s lines\n" "$c" "$n"
+  done
+  exit 0
+fi
+
+pat="$(pattern_for "$1")"
+if [[ -n "$pat" ]]; then
+  match=$(grep -iE "$pat" "$IDX" | shuf -n1)
+else
+  # not a category: treat as a keyword search against the library
+  match=$(grep -i "$1" "$IDX" | shuf -n1)
+fi
+
+[[ -z "$match" ]] && { echo "overlord-say: nothing for '$1' (try --list)" >&2; exit 1; }
+file=$(echo "$match" | cut -f1)
+paplay "$LIB/$file" 2>/dev/null

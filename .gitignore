@@ -1,0 +1,21 @@
+# Secrets — never commit your API key
+cloud.env
+*.env
+!cloud.env.example
+
+# Copyrighted / personal audio — provide your own, never redistribute game audio
+*.wav
+*.mp3
+*.mp4
+*.m4a
+*.webm
+*.opus
+voice/library/
+voice/phrases/
+voice/clips/
+voice/transcript/
+
+# Local model weights / caches
+*.onnx
+__pycache__/
+*.pyc

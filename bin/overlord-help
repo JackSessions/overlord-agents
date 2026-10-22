@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# overlord-help (ovh) — full reference for the Overlord agent suite
+O='\033[38;5;208m'; B='\033[1m'; D='\033[2m'; R='\033[0m'; C='\033[36m'
+cat <<EOF
+
+$(printf "${O}${B}")  ██████  ██    ██ ███████ ██████  ██      ██████  ██████  ██████  $(printf "$R")
+$(printf "${O}${B}") ██    ██ ██    ██ ██      ██   ██ ██     ██    ██ ██   ██ ██   ██ $(printf "$R")
+$(printf "${O}${B}") ██    ██ ██    ██ █████   ██████  ██     ██    ██ ██████  ██   ██ $(printf "$R")
+$(printf "${O}${B}") ██    ██  ██  ██  ██      ██   ██ ██     ██    ██ ██   ██ ██   ██ $(printf "$R")
+$(printf "${O}${B}")  ██████    ████   ███████ ██   ██ ██████  ██████  ██   ██ ██████  $(printf "$R")
+          $(printf "${D}")local + cloud AI agents · his real voice · AWACS on a laptop$(printf "$R")
+
+$(printf "${B}${C}")━━ GENERAL AGENTS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(printf "$R")
+  $(printf "${B}")ov$(printf "$R")  "question"        Study/chat agent (radio style)
+  $(printf "${B}")ovs$(printf "$R") "task"            System agent — proposes a command, YOU approve, it runs
+  $(printf "${B}")ovc$(printf "$R")                   Coding agent (Aider) in the current project
+       $(printf "${D}")all run cloud Qwen when online, local Qwen offline$(printf "$R")
+
+$(printf "${B}${C}")━━ SECURITY SPECIALISTS  (ovx <domain> \"q\") ━━━━━━━━━━━━━━━━━━━$(printf "$R")
+  $(printf "${B}")ovx rev$(printf "$R")      Reverse engineering (asm, Ghidra, gdb, radare2)
+  $(printf "${B}")ovx malware$(printf "$R")  Malware analysis — static/dynamic, YARA, safe lab
+  $(printf "${B}")ovx ctf$(printf "$R")      CTF coach (pwn / web / crypto / forensics)
+  $(printf "${B}")ovx web$(printf "$R")      Web security / bug bounty (OWASP, Burp)
+  $(printf "${B}")ovx pwn$(printf "$R")      Binary exploitation (ROP, heap, pwntools)
+  $(printf "${B}")ovx crypto$(printf "$R")   Cryptography (attacks, CTF crypto)
+  $(printf "${B}")ovx android$(printf "$R")  Mobile bug bounty (manifest, Frida, jadx, objection)
+       $(printf "${D}")run 'ovx <domain>' with no question for interactive mode$(printf "$R")
+
+$(printf "${B}${C}")━━ MOBILE BUG HUNTING ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(printf "$R")
+  $(printf "${B}")apk-recon$(printf "$R") app.apk    Static attack-surface recon + AI briefing
+  $(printf "${B}")ovx android$(printf "$R") "..."     Mobile coach — paste manifest/code/traffic
+       $(printf "${D}")flow: apk-recon → adb install → frida/objection → mitmproxy → ovx android$(printf "$R")
+       $(printf "${D}")feed real data:  ovx rev \"\$(objdump -d bin)\"  ·  ovx web \"\$(cat req.txt)\"$(printf "$R")
+
+$(printf "${B}${C}")━━ VOICE (his real lines) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(printf "$R")
+  $(printf "${B}")ovf$(printf "$R") <word>            Search & play any of 384 real Overlord lines
+  $(printf "${B}")ovf$(printf "$R") --search <w>      List matching lines (don't play)
+  $(printf "${B}")ovf$(printf "$R") --all             List every line
+  $(printf "${B}")overlord-say$(printf "$R") <cat>    Random cue: ready/success/fail/warning/standby/inbound
+
+$(printf "${B}${C}")━━ BROWSER ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(printf "$R")
+  Open WebUI  →  http://localhost:8080   (local + cloud Qwen, upload notes for RAG)
+
+$(printf "${B}${C}")━━ BRAIN / COST ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(printf "$R")
+  online  → cloud Qwen (qwen3.7-plus, 1M free tokens/model, Singapore region)
+  offline → local Qwen via Ollama (free, private, slower)
+  config  → ~/.config/overlord/cloud.env   (chmod 600)
+  $(printf "${D}")enable 'Stop-on-Exhaust' in the Alibaba console = never charged$(printf "$R")
+
+EOF

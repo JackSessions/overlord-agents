@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+# ==================================================
+#  OVERLORD — local voice AI agent (Qwen + Piper + radio filter)
+#  Usage:  overlord "what's my system load?"
+#          overlord            (interactive mode)
+# ==================================================
+
+OVERLORD_DIR="$HOME/.local/share/overlord"
+VOICE="$OVERLORD_DIR/voices/en_US-ryan-high.onnx"
+OLLAMA_URL="http://localhost:11434"
+MODEL="qwen2.5-coder:3b"
+PIPER="$HOME/.local/bin/piper"
+
+SYSTEM_PROMPT="You are Overlord, a tactical AI command operator (like an AWACS controller). \
+Respond in short, clipped, military radio style. Be concise: 1-3 sentences max. \
+Use callsign language when natural (Copy, Roger, Be advised, Stand by, Affirmative). \
+You are helpful and precise. Answer the operator's question directly."
+
+# Real-voice cue via the soundboard (his actual voice, not robotic TTS)
+SAY="$HOME/.local/bin/overlord-say"
+cue() { "$SAY" "$1" 2>/dev/null & }
+
+# Load cloud Qwen creds if present (cloud-first when online, local fallback)
+[[ -f "$HOME/.config/overlord/cloud.env" ]] && source "$HOME/.config/overlord/cloud.env"
+
+ask() {
+    local query="$1" reply=""
+    cue standby
+    # Cloud Qwen first (fast) when online
+    if [[ -n "$OVERLORD_CLOUD_KEY" ]]; then
+        reply=$(curl -s --max-time 20 "$OVERLORD_CLOUD_BASE/chat/completions" \
+            -H "Authorization: Bearer $OVERLORD_CLOUD_KEY" -H "Content-Type: application/json" \
+            -d "$(jq -n --arg m "$OVERLORD_CLOUD_MODEL" --arg sys "$SYSTEM_PROMPT" --arg q "$query" \
+            '{model:$m,messages:[{role:"system",content:$sys},{role:"user",content:$q}],max_tokens:300}')" \
+            | jq -r '.choices[0].message.content // empty' 2>/dev/null)
+    fi
+    # Fall back to local Ollama if offline / cloud failed
+    if [[ -z "$reply" ]]; then
+        reply=$(curl -s "$OLLAMA_URL/api/chat" -d "$(jq -n \
+            --arg m "$MODEL" --arg sys "$SYSTEM_PROMPT" --arg q "$query" \
+            '{model:$m, stream:false, messages:[{role:"system",content:$sys},{role:"user",content:$q}]}')" \
+            | jq -r '.message.content')
+    fi
+    echo ""
+    echo "  [OVERLORD] $reply"
+    echo ""
+    cue success
+}
+
+if [[ -n "$1" ]]; then
+    ask "$*"
+else
+    cue ready
+    echo "  [OVERLORD] Online. Type your orders (or 'exit')."
+    while true; do
+        printf "  [YOU] > "
+        read -r line
+        [[ "$line" == "exit" || "$line" == "quit" ]] && { cue success; break; }
+        [[ -z "$line" ]] && continue
+        ask "$line"
+    done
+fi
