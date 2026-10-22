@@ -13,6 +13,8 @@ Local and cloud AI agents for the terminal, with a voice layer built from your o
 | `overlord "q"` (`ov`) | Study and chat agent |
 | `overlord-sys "task"` (`ovs`) | System agent: proposes a shell command, you approve, it runs |
 | `overlord-code` (`ovc`) | Coding agent ([Aider](https://aider.chat)) |
+| `overlord-listen` (`ovl`) | Voice input: speak, Whisper transcribes, an agent answers |
+| `ovteam "task"` (`ovt`) | Swarm: an orchestrator picks specialists, they analyze in parallel, a lead synthesizes |
 | `ovx <domain> "q"` | Security specialists: `rev` `malware` `ctf` `web` `pwn` `crypto` `android` |
 | `apk-recon app.apk` | Android static recon, then an AI attack-surface briefing |
 | `overlord-find <word>` (`ovf`) | Search and play any voice line |

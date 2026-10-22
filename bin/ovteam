@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+# ==================================================
+#  ovteam - Overlord agent SWARM. An orchestrator picks relevant specialists,
+#  each analyzes the task, then a lead synthesizes one combined briefing.
+#  Usage:  ovteam "I found a login form that reflects my input in an error"
+#  Cloud brain strongly recommended (parallel calls). Falls back to local.
+# ==================================================
+set -uo pipefail
+SAY="$HOME/.local/bin/overlord-say"
+[[ -f "$HOME/.config/overlord/cloud.env" ]] && source "$HOME/.config/overlord/cloud.env"
+TASK="${*:-}"
+[[ -z "$TASK" ]] && { echo "usage: ovteam \"your security task/question\""; exit 1; }
+
+PANEL="rev malware ctf web pwn crypto android"
+
+# one LLM call: $1=system prompt, $2=user content  -> stdout
+llm() {
+  local sys="$1" q="$2"
+  if [[ -n "${OVERLORD_CLOUD_KEY:-}" ]]; then
+    curl -s --max-time 40 "$OVERLORD_CLOUD_BASE/chat/completions" \
+      -H "Authorization: Bearer $OVERLORD_CLOUD_KEY" -H "Content-Type: application/json" \
+      -d "$(jq -n --arg m "$OVERLORD_CLOUD_MODEL" --arg s "$sys" --arg q "$q" \
+        '{model:$m,messages:[{role:"system",content:$s},{role:"user",content:$q}],max_tokens:700}')" \
+      | jq -r '.choices[0].message.content // empty'
+  else
+    curl -s "http://localhost:11434/api/chat" -d "$(jq -n --arg m "qwen2.5-coder:3b" --arg s "$sys" --arg q "$q" \
+      '{model:$m,stream:false,messages:[{role:"system",content:$s},{role:"user",content:$q}]}')" \
+      | jq -r '.message.content'
+  fi
+}
+
+"$SAY" ready 2>/dev/null &
+echo "  [OVERLORD SWARM] Assembling the team for: $TASK"
+echo ""
+
+# 1) Orchestrator picks 2-3 relevant specialists
+ORCH="You route security tasks to specialists. Available: $PANEL. \
+Reply with ONLY a space-separated list of the 2-3 most relevant specialist names for the task, nothing else."
+CHOSEN=$(llm "$ORCH" "$TASK" | tr ',' ' ' | tr -s ' ' | grep -oE "$(echo $PANEL | tr ' ' '|')" | tr '\n' ' ' | xargs)
+[[ -z "$CHOSEN" ]] && CHOSEN="web rev ctf"
+echo "  >> Specialists engaged: $CHOSEN"
+echo ""
+
+# 2) Each specialist analyzes (in parallel)
+WORK=$(mktemp -d); trap 'rm -rf "$WORK"' EXIT
+for d in $CHOSEN; do
+  (
+    sys="You are a $d security specialist. In 3-4 sentences, give your expert take and the single most important next step for this task. Authorized/learning context."
+    ans=$(llm "$sys" "$TASK")
+    # retry once if the rate limit returned empty
+    [[ -z "$ans" ]] && { sleep 1.5; ans=$(llm "$sys" "$TASK"); }
+    echo "$ans" > "$WORK/$d.txt"
+  ) &
+  sleep 0.6   # stagger to stay under the free-tier concurrent rate limit
+done
+wait
+
+# Show each take
+COMBINED=""
+for d in $CHOSEN; do
+  ans=$(cat "$WORK/$d.txt" 2>/dev/null)
+  echo "  ── [$d] ─────────────────────────────"
+  echo "$ans" | fold -s -w 76 | sed 's/^/  /'
+  echo ""
+  COMBINED="$COMBINED
+
+[$d specialist]: $ans"
+done
+
+# 3) Lead synthesizes
+echo "  ══ [OVERLORD · SYNTHESIS] ══════════════════"
+LEAD="You are the lead analyst. Given the specialists' takes, produce a short prioritized action plan (numbered, 3-5 steps) for the operator. Be concrete."
+llm "$LEAD" "Task: $TASK$COMBINED" | fold -s -w 76 | sed 's/^/  /'
+echo ""
+"$SAY" success 2>/dev/null &

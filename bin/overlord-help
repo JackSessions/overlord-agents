@@ -14,6 +14,8 @@ $(printf "${B}${C}")━━ GENERAL AGENTS ━━━━━━━━━━━━�
   $(printf "${B}")ov$(printf "$R")  "question"        Study/chat agent (radio style)
   $(printf "${B}")ovs$(printf "$R") "task"            System agent - proposes a command, YOU approve, it runs
   $(printf "${B}")ovc$(printf "$R")                   Coding agent (Aider) in the current project
+  $(printf "${B}")ovl$(printf "$R") [target]          Voice input - speak, Whisper transcribes, agent answers
+  $(printf "${B}")ovt$(printf "$R") "task"            Swarm - orchestrator picks specialists, team synthesizes
        $(printf "${D}")all run cloud Qwen when online, local Qwen offline$(printf "$R")
 
 $(printf "${B}${C}")━━ SECURITY SPECIALISTS  (ovx <domain> \"q\") ━━━━━━━━━━━━━━━━━━━$(printf "$R")

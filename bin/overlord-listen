@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# ==================================================
+#  overlord-listen (ovl) - speak to Overlord, hands-free
+#  Records your mic, transcribes with Whisper, routes to an agent.
+#  Usage:  ovl          -> speak, sends to the chat agent (overlord)
+#          ovl sys      -> sends to the system agent (overlord-sys)
+#          ovl rev      -> sends to a security specialist (ovx rev)
+# ==================================================
+set -uo pipefail
+TMPDIR_L=$(mktemp -d)
+WAV="$TMPDIR_L/speech.wav"
+SAY="$HOME/.local/bin/overlord-say"
+trap 'rm -rf "$TMPDIR_L"' EXIT
+
+TARGET="${1:-chat}"
+
+echo "  🎤 LISTENING - speak now, then press ENTER to stop..."
+parecord --file-format=wav "$WAV" >/dev/null 2>&1 &
+REC=$!
+read -r _            # wait for Enter
+kill "$REC" 2>/dev/null; wait "$REC" 2>/dev/null
+
+[[ ! -s "$WAV" ]] && { echo "  (no audio captured)"; exit 1; }
+echo "  ⏳ Transcribing..."
+
+whisper-ctranslate2 "$WAV" --model base --language en --device cpu \
+  --output_format txt --output_dir "$TMPDIR_L" >/dev/null 2>&1
+TEXT=$(cat "$TMPDIR_L/speech.txt" 2>/dev/null | tr '\n' ' ' | sed 's/^ *//; s/ *$//')
+
+[[ -z "$TEXT" ]] && { echo "  (couldn't understand - try again)"; "$SAY" fail 2>/dev/null & exit 1; }
+echo "  🗣  You said: \"$TEXT\""
+echo ""
+
+case "$TARGET" in
+  sys|system)                 overlord-sys "$TEXT" ;;
+  rev|malware|ctf|web|pwn|crypto|android) ovx "$TARGET" "$TEXT" ;;
+  *)                          overlord "$TEXT" ;;
+esac
