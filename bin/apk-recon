@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==================================================
-#  apk-recon — static attack-surface recon on an APK, then an AI bug-hunting briefing
+#  apk-recon - static attack-surface recon on an APK, then an AI bug-hunting briefing
 #  Usage:  apk-recon /path/to/app.apk
 #  Authorized testing / bug bounty / learning only.
 # ==================================================
@@ -66,7 +66,7 @@ if [[ -n "${OVERLORD_CLOUD_KEY:-}" ]]; then
     -H "Authorization: Bearer $OVERLORD_CLOUD_KEY" -H "Content-Type: application/json" \
     -d "$(jq -n --arg m "$OVERLORD_CLOUD_MODEL" --arg s "$SYS" --arg q "$Q" \
       '{model:$m,messages:[{role:"system",content:$s},{role:"user",content:$q}],max_tokens:1100}')" \
-    | jq -r '.choices[0].message.content // "（cloud error — is the endpoint reachable?)"'
+    | jq -r '.choices[0].message.content // "（cloud error - is the endpoint reachable?)"'
 else
   curl -s "http://localhost:11434/api/chat" -d "$(jq -n --arg m "qwen2.5-coder:3b" --arg s "$SYS" --arg q "$Q" \
     '{model:$m,stream:false,messages:[{role:"system",content:$s},{role:"user",content:$q}]}')" \

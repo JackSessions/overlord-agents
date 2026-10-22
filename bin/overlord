@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==================================================
-#  OVERLORD — local voice AI agent (Qwen + Piper + radio filter)
+#  OVERLORD - local voice AI agent (Qwen + Piper + radio filter)
 #  Usage:  overlord "what's my system load?"
 #          overlord            (interactive mode)
 # ==================================================

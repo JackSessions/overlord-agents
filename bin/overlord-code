@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==================================================
-#  overlord-code — launch the Aider coding agent with Overlord voice cues
+#  overlord-code - launch the Aider coding agent with Overlord voice cues
 #  Usage:  overlord-code          (starts aider in the current project)
 # ==================================================
 SAY="$HOME/.local/bin/overlord-say"

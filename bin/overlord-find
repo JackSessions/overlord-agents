@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==================================================
-#  overlord-find — search & play ANY of Overlord's 155 real voice lines
+#  overlord-find - search & play ANY of Overlord's 155 real voice lines
 #  Usage:  overlord-find mission      (play first line matching 'mission')
 #          overlord-find --search cover   (list matches, don't play)
 #          overlord-find --all        (list every line)

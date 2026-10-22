@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# overlord-help (ovh) — full reference for the Overlord agent suite
+# overlord-help (ovh) - full reference for the Overlord agent suite
 O='\033[38;5;208m'; B='\033[1m'; D='\033[2m'; R='\033[0m'; C='\033[36m'
 cat <<EOF
 
@@ -12,13 +12,13 @@ $(printf "${O}${B}")  ██████    ████   ███████
 
 $(printf "${B}${C}")━━ GENERAL AGENTS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(printf "$R")
   $(printf "${B}")ov$(printf "$R")  "question"        Study/chat agent (radio style)
-  $(printf "${B}")ovs$(printf "$R") "task"            System agent — proposes a command, YOU approve, it runs
+  $(printf "${B}")ovs$(printf "$R") "task"            System agent - proposes a command, YOU approve, it runs
   $(printf "${B}")ovc$(printf "$R")                   Coding agent (Aider) in the current project
        $(printf "${D}")all run cloud Qwen when online, local Qwen offline$(printf "$R")
 
 $(printf "${B}${C}")━━ SECURITY SPECIALISTS  (ovx <domain> \"q\") ━━━━━━━━━━━━━━━━━━━$(printf "$R")
   $(printf "${B}")ovx rev$(printf "$R")      Reverse engineering (asm, Ghidra, gdb, radare2)
-  $(printf "${B}")ovx malware$(printf "$R")  Malware analysis — static/dynamic, YARA, safe lab
+  $(printf "${B}")ovx malware$(printf "$R")  Malware analysis - static/dynamic, YARA, safe lab
   $(printf "${B}")ovx ctf$(printf "$R")      CTF coach (pwn / web / crypto / forensics)
   $(printf "${B}")ovx web$(printf "$R")      Web security / bug bounty (OWASP, Burp)
   $(printf "${B}")ovx pwn$(printf "$R")      Binary exploitation (ROP, heap, pwntools)
@@ -28,7 +28,7 @@ $(printf "${B}${C}")━━ SECURITY SPECIALISTS  (ovx <domain> \"q\") ━━━�
 
 $(printf "${B}${C}")━━ MOBILE BUG HUNTING ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(printf "$R")
   $(printf "${B}")apk-recon$(printf "$R") app.apk    Static attack-surface recon + AI briefing
-  $(printf "${B}")ovx android$(printf "$R") "..."     Mobile coach — paste manifest/code/traffic
+  $(printf "${B}")ovx android$(printf "$R") "..."     Mobile coach - paste manifest/code/traffic
        $(printf "${D}")flow: apk-recon → adb install → frida/objection → mitmproxy → ovx android$(printf "$R")
        $(printf "${D}")feed real data:  ovx rev \"\$(objdump -d bin)\"  ·  ovx web \"\$(cat req.txt)\"$(printf "$R")
 

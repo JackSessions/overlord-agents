@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==================================================
-#  overlord-say — play a RANDOM Overlord line from a category (his real voice)
+#  overlord-say - play a RANDOM Overlord line from a category (his real voice)
 #  Categories search the FULL library, so each call rotates through all matches.
 #  Usage:  overlord-say success   |   overlord-say --list
 # ==================================================

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==================================================
-#  overlord-sys — voice system agent (Qwen picks a command, YOU approve, it runs)
+#  overlord-sys - voice system agent (Qwen picks a command, YOU approve, it runs)
 #  Usage:  overlord-sys "what's eating my RAM?"
 #          overlord-sys           (interactive)
 # ==================================================

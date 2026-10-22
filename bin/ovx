@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==================================================
-#  ovx — Overlord specialist agents (security-focused tutors)
+#  ovx - Overlord specialist agents (security-focused tutors)
 #  Usage:  ovx rev   "what does this x86 snippet do: xor eax,eax; ret"
 #          ovx ctf   "how do I approach a format string bug"
 #          ovx <domain>          (interactive in that domain)
